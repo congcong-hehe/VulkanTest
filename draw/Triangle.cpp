@@ -560,8 +560,8 @@ void TriangleTest::CreateImageViews()
 void TriangleTest::CreateGraphicsPipeline()
 {
     // shader
-    auto vertShaderCode = ReadFile("../../triangle_demo/shaders/vert.spv");
-    auto fragShaderCode = ReadFile("../../triangle_demo/shaders/frag.spv");
+    auto vertShaderCode = ReadFile("../../draw/shaders/vert.spv");
+    auto fragShaderCode = ReadFile("../../draw/shaders/frag.spv");
 
     VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);

@@ -16,4 +16,4 @@ add_subdirectory(third_party/glfw)
 link_libraries(glfw)
 
 # target
-add_executable(Triangle triangle_demo/Triangle.cpp)
+add_executable(Triangle draw/Triangle.cpp)
