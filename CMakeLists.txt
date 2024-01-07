@@ -18,4 +18,4 @@ link_libraries(glfw)
 # target
 add_executable(Draw draw/draw.cpp)
 
-# add_executable(DrawIndexed draw_indexed/draw_indexed.cpp)
+add_executable(DrawIndexed draw_indexed/draw.cpp)
