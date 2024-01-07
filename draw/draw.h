@@ -60,7 +60,7 @@ struct Vertex
     }
 };
 
-class TriangleTest
+class VulkanTest
 {
 public:
     void Run();
@@ -136,6 +136,10 @@ private:
 
     // synchronization
     void CreateSyncObject();
+
+    // buffer
+    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory& bufferMemory);
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     // vertex buffer
     void CreateVertexBuffer();

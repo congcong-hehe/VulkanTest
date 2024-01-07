@@ -1,4 +1,13 @@
-#include "Triangle.h"
+/*
+draw a trianlge using vertex buffer. simple shader.
+
+modify: 
+2024/1/7    init
+2024/1/4    using transfer copy buffer
+
+*/
+
+#include "draw.h"
 #include <limits>
 #include <algorithm>
 #include <string>
@@ -58,7 +67,7 @@ const std::vector<Vertex> vertices =
     {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 };
 
-void TriangleTest::Run()
+void VulkanTest::Run()
 {
     this->InitWindow();
     this->InitVulkan();
@@ -67,7 +76,7 @@ void TriangleTest::Run()
 }
 
 
-void TriangleTest::InitWindow()
+void VulkanTest::InitWindow()
 {
     glfwInit(); // initilize a glfw library
 
@@ -77,7 +86,7 @@ void TriangleTest::InitWindow()
     m_Window = glfwCreateWindow(WIDTH, HEIGHT, "Triangle", nullptr, nullptr);
 }
 
-void TriangleTest::InitVulkan()
+void VulkanTest::InitVulkan()
 {
     this->CreateInstance();
     this->SetupDebugMessenger();
@@ -95,7 +104,7 @@ void TriangleTest::InitVulkan()
     this->CreateSyncObject();
 }
 
-void TriangleTest::MainLoop()
+void VulkanTest::MainLoop()
 {
     while (!glfwWindowShouldClose(m_Window))
     {
@@ -106,7 +115,7 @@ void TriangleTest::MainLoop()
     vkDeviceWaitIdle(m_Device);
 }
 
-void TriangleTest::CleanUp()
+void VulkanTest::CleanUp()
 {
     vkDestroySemaphore(m_Device, m_ImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(m_Device, m_RenderFinishedSemaphore, nullptr);
@@ -148,7 +157,7 @@ void TriangleTest::CleanUp()
 }
 
 // instance is the connection between the vulkan lib and app, specify some details about you app to driver
-void TriangleTest::CreateInstance()
+void VulkanTest::CreateInstance()
 {
     if (enableValidationLayers && !CheckValidationLayerSupport())
         throw std::runtime_error("validation layers requested, but not avaliable!");
@@ -194,7 +203,7 @@ void TriangleTest::CreateInstance()
         throw std::runtime_error("failed to create instance!");
 }
 
-void TriangleTest::PickPhysicalDevice()
+void VulkanTest::PickPhysicalDevice()
 {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
@@ -218,7 +227,7 @@ void TriangleTest::PickPhysicalDevice()
 
 // check if the device is suitable for our operation
 // could choose discarete gpu or integrated gpu
-bool TriangleTest::IsDeviceSuitable(VkPhysicalDevice device)
+bool VulkanTest::IsDeviceSuitable(VkPhysicalDevice device)
 {
     QueueFamilyIndices indices = FindQueueFamilies(device);
 
@@ -234,7 +243,7 @@ bool TriangleTest::IsDeviceSuitable(VkPhysicalDevice device)
     return indices.IsComplete() && extensionsSupported && swapChainAdequate;
 }
 
-QueueFamilyIndices TriangleTest::FindQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices VulkanTest::FindQueueFamilies(VkPhysicalDevice device)
 {
     QueueFamilyIndices indices;
 
@@ -269,7 +278,7 @@ QueueFamilyIndices TriangleTest::FindQueueFamilies(VkPhysicalDevice device)
     return indices;
 }
 
-void TriangleTest::CreateLogicalDevice()
+void VulkanTest::CreateLogicalDevice()
 {
     QueueFamilyIndices indices = FindQueueFamilies(m_PhysicalDevice);
 
@@ -312,13 +321,13 @@ void TriangleTest::CreateLogicalDevice()
     vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
 }
 
-void TriangleTest::CreateSurface()
+void VulkanTest::CreateSurface()
 {
     if (glfwCreateWindowSurface(m_Instance, m_Window, nullptr, &m_Surface) != VK_SUCCESS)
         throw std::runtime_error("failed to create window surface!");
 }
 
-bool TriangleTest::CheckDeviceExtensionSupport(VkPhysicalDevice device)
+bool VulkanTest::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -337,7 +346,7 @@ bool TriangleTest::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 }
 
 // check if all the layers is supported
-bool TriangleTest::CheckValidationLayerSupport()
+bool VulkanTest::CheckValidationLayerSupport()
 {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -363,7 +372,7 @@ bool TriangleTest::CheckValidationLayerSupport()
     return true;
 }
 
-void TriangleTest::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
+void VulkanTest::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
 {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -372,7 +381,7 @@ void TriangleTest::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateI
     createInfo.pfnUserCallback = DebugCallback;
 }
 
-void TriangleTest::SetupDebugMessenger()
+void VulkanTest::SetupDebugMessenger()
 {
     if (!enableValidationLayers)
         return;
@@ -386,7 +395,7 @@ void TriangleTest::SetupDebugMessenger()
     }
 }
 
-std::vector<const char *> TriangleTest::GetRequiredExtensions()
+std::vector<const char *> VulkanTest::GetRequiredExtensions()
 {
     uint32_t glfwExtensionCount = 0;
     const char **glfwExtensions;
@@ -402,7 +411,7 @@ std::vector<const char *> TriangleTest::GetRequiredExtensions()
     return extensions;
 }
 
-SwapChainSupportDetails TriangleTest::QuerySwapChainSupport(VkPhysicalDevice device)
+SwapChainSupportDetails VulkanTest::QuerySwapChainSupport(VkPhysicalDevice device)
 {
     SwapChainSupportDetails details;
 
@@ -427,7 +436,7 @@ SwapChainSupportDetails TriangleTest::QuerySwapChainSupport(VkPhysicalDevice dev
     return details;
 }
 
-VkSurfaceFormatKHR TriangleTest::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats)
+VkSurfaceFormatKHR VulkanTest::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats)
 {
     for (const auto& availableFormat : availableFormats)
     {
@@ -440,7 +449,7 @@ VkSurfaceFormatKHR TriangleTest::ChooseSwapSurfaceFormat(const std::vector<VkSur
     return availableFormats[0];
 }
 
- VkPresentModeKHR TriangleTest::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes)
+ VkPresentModeKHR VulkanTest::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes)
  {
     for (const auto& availablePresentMode : availablePresentModes)
     {
@@ -453,7 +462,7 @@ VkSurfaceFormatKHR TriangleTest::ChooseSwapSurfaceFormat(const std::vector<VkSur
     return VK_PRESENT_MODE_FIFO_KHR;    // guranteed to be available
  }
 
-VkExtent2D TriangleTest::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
+VkExtent2D VulkanTest::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {
@@ -471,7 +480,7 @@ VkExtent2D TriangleTest::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabi
     }
 }
 
-void TriangleTest::CreateSwapChain()
+void VulkanTest::CreateSwapChain()
 {
     SwapChainSupportDetails swapChainSupportDetails = QuerySwapChainSupport(m_PhysicalDevice);
 
@@ -529,7 +538,7 @@ void TriangleTest::CreateSwapChain()
     m_SwapChainExtent = extent;
 }
 
-void TriangleTest::CreateImageViews()
+void VulkanTest::CreateImageViews()
 {
     m_SwapChainImageViews.resize(m_SwapChainImages.size());
 
@@ -557,7 +566,7 @@ void TriangleTest::CreateImageViews()
     }
 }
 
-void TriangleTest::CreateGraphicsPipeline()
+void VulkanTest::CreateGraphicsPipeline()
 {
     // shader
     auto vertShaderCode = ReadFile("../../draw/shaders/vert.spv");
@@ -680,7 +689,7 @@ void TriangleTest::CreateGraphicsPipeline()
     vkDestroyShaderModule(m_Device, vertShaderModule, nullptr);
 }
 
-std::vector<char> TriangleTest::ReadFile(const std::string &fileName)
+std::vector<char> VulkanTest::ReadFile(const std::string &fileName)
 {
     std::ifstream file(fileName, std::ios::ate | std::ios::binary);
 
@@ -700,7 +709,7 @@ std::vector<char> TriangleTest::ReadFile(const std::string &fileName)
     return buffer;
 }
 
-VkShaderModule TriangleTest::CreateShaderModule(const std::vector<char>& code)
+VkShaderModule VulkanTest::CreateShaderModule(const std::vector<char>& code)
 {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -716,7 +725,7 @@ VkShaderModule TriangleTest::CreateShaderModule(const std::vector<char>& code)
     return shaderModule;
 }
 
-void TriangleTest::CreateRenderPass()
+void VulkanTest::CreateRenderPass()
 {
     // attachment description
     VkAttachmentDescription colorAttachment{};
@@ -760,7 +769,7 @@ void TriangleTest::CreateRenderPass()
         throw std::runtime_error("failed to create render pass!");
 }
 
-void TriangleTest::CreateFramebuffers()
+void VulkanTest::CreateFramebuffers()
 {
     m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size());
 
@@ -783,7 +792,7 @@ void TriangleTest::CreateFramebuffers()
 
 }
 
-void TriangleTest::CreateCommandPool()
+void VulkanTest::CreateCommandPool()
 {
     QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(m_PhysicalDevice);
 
@@ -795,7 +804,7 @@ void TriangleTest::CreateCommandPool()
         throw std::runtime_error("failed to create command pool!");
 }
 
-void TriangleTest::CreateCommandBuffer()
+void VulkanTest::CreateCommandBuffer()
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -806,7 +815,7 @@ void TriangleTest::CreateCommandBuffer()
         throw std::runtime_error("failed to allocate command buffer!");
 }
 
-void TriangleTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -856,7 +865,7 @@ void TriangleTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         throw std::runtime_error("failed to record command buffer!");
 }
 
-void TriangleTest::CreateSyncObject()
+void VulkanTest::CreateSyncObject()
 {
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -873,7 +882,7 @@ void TriangleTest::CreateSyncObject()
     }
 }
 
-void TriangleTest::DrawFrame()
+void VulkanTest::DrawFrame()
 {
     // 1. wait for the previous frame to finish
     vkWaitForFences(m_Device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);    // wait fence be signaled
@@ -919,40 +928,28 @@ void TriangleTest::DrawFrame()
     vkQueuePresentKHR(m_PresentQueue, &presentInfo);
 }
 
-void TriangleTest::CreateVertexBuffer()
+void VulkanTest::CreateVertexBuffer()
 {   
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-    if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &m_VertexBuffer) != VK_SUCCESS)
-        throw std::runtime_error("failed to create vertex buffer");
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(m_Device, m_VertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    
-    if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &m_VertexBufferMemory) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate vertex buffer memory");
-    }
-
-    vkBindBufferMemory(m_Device, m_VertexBuffer, m_VertexBufferMemory, 0);
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
     void *data;
-    vkMapMemory(m_Device, m_VertexBufferMemory, 0, bufferInfo.size, 0, &data);
-    memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-    vkUnmapMemory(m_Device, m_VertexBufferMemory);
+    vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_Device, stagingBufferMemory);
 
+    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_VertexBuffer, m_VertexBufferMemory);
+
+    CopyBuffer(stagingBuffer, m_VertexBuffer, bufferSize);
+
+    vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
+    vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
 }
 
-uint32_t TriangleTest::FindMemoryType(uint32_t typeFillter, VkMemoryPropertyFlags properties)
+uint32_t VulkanTest::FindMemoryType(uint32_t typeFillter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memProperties);  // queay the available types of memeory
@@ -968,9 +965,72 @@ uint32_t TriangleTest::FindMemoryType(uint32_t typeFillter, VkMemoryPropertyFlag
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
+void VulkanTest::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory& bufferMemory)
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
+        throw std::runtime_error("failed to create buffer");
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(m_Device, buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
+
+    if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to allocate vertex buffer memory");
+    }
+
+    vkBindBufferMemory(m_Device, buffer, bufferMemory, 0);
+}
+
+void VulkanTest::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = m_CommandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(m_Device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;  // use one once
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_GraphicsQueue);
+
+    vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
+}
+
 int main()
 {
-    TriangleTest app;
+    VulkanTest app;
 
     try
     {
