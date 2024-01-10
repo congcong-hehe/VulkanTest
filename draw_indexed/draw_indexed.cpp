@@ -1,13 +1,8 @@
 /*
 draw a trianlge using vertex buffer. simple shader.
-
-modify: 
-2024/1/7    init
-2024/1/7    using transfer copy buffer
-
 */
 
-#include "draw.h"
+#include "draw_indexed.h"
 #include "../common/tools.h"
 
 #include <limits>
@@ -69,6 +64,11 @@ const std::vector<Vertex> vertices =
     {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 };
 
+const std::vector<uint32_t> indices = 
+{
+    0, 1, 2
+};
+
 void VulkanTest::Run()
 {
     this->InitWindow();
@@ -102,6 +102,7 @@ void VulkanTest::InitVulkan()
     this->CreateFramebuffers();
     this->CreateCommandPool();
     this->CreateVertexBuffer();
+    this->CreateIndexBuffer();
     this->CreateCommandBuffer();
     this->CreateSyncObject();
 }
@@ -826,6 +827,9 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
+    // bind index buffer
+    vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
     // set dynamic pipeline state
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -841,7 +845,7 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
     // finish
     vkCmdEndRenderPass(commandBuffer);
@@ -1000,6 +1004,27 @@ void VulkanTest::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 
     vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
+}
+
+void VulkanTest::CreateIndexBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void *data;
+    VK_CHECK_RESULT(vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data));
+    memcpy(data, indices.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_Device, stagingBufferMemory);
+
+    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer, m_IndexBufferMemory);
+
+    CopyBuffer(stagingBuffer, m_IndexBuffer, bufferSize);
+
+    vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
+    vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
 }
 
 int main()

@@ -1,12 +1,10 @@
 /*
-draw a trianlge using vertex buffer and index buffer. simple shader.
-
-modify: 
-2024/1/7    init
-
+test instanced draw. Draw 2 triangles with diffrent position, scale, color in one draw call with instance count is 2.
 */
 
-#include "draw.h"
+#include "draw_instanced.h"
+#include "../common/tools.h"
+
 #include <limits>
 #include <algorithm>
 #include <string>
@@ -61,14 +59,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityF
 
 const std::vector<Vertex> vertices = 
 {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{0.0f, -0.5f}},
+    {{0.5f, 0.5f}},
+    {{-0.5f, 0.5f}}
 };
 
-const std::vector<uint32_t> indices = 
+const std::vector<Instance> instnaces = 
 {
-    0, 1, 2
+    {{-0.5f, 0.0f}, {0.8f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.0f}, {0.5f}, {0.0f, 1.0f, 0.0f}},
 };
 
 void VulkanTest::Run()
@@ -104,7 +103,7 @@ void VulkanTest::InitVulkan()
     this->CreateFramebuffers();
     this->CreateCommandPool();
     this->CreateVertexBuffer();
-    this->CreateIndexBuffer();
+    this->CreateInstanceBuffer();
     this->CreateCommandBuffer();
     this->CreateSyncObject();
 }
@@ -144,11 +143,10 @@ void VulkanTest::CleanUp()
 
     vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);  // call before the device
 
-    vkDestroyBuffer(m_Device, m_IndexBuffer, nullptr);
-    vkFreeMemory(m_Device, m_IndexBufferMemory, nullptr);
-
     vkDestroyBuffer(m_Device, m_VertexBuffer, nullptr);
     vkFreeMemory(m_Device, m_VertexBufferMemory, nullptr);
+    vkDestroyBuffer(m_Device, m_InstanceBuffer, nullptr);
+    vkFreeMemory(m_Device, m_InstanceBufferMemory, nullptr);
 
     vkDestroyDevice(m_Device, nullptr);
 
@@ -207,8 +205,7 @@ void VulkanTest::CreateInstance()
     }
 
     // 3. create instance
-    if (vkCreateInstance(&createInfo, nullptr, &m_Instance) != VK_SUCCESS)
-        throw std::runtime_error("failed to create instance!");
+    VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &m_Instance));
 }
 
 void VulkanTest::PickPhysicalDevice()
@@ -322,8 +319,7 @@ void VulkanTest::CreateLogicalDevice()
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_Device) != VK_SUCCESS)
-        std::runtime_error("failed to create logical device!");
+    VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_Device));
 
     vkGetDeviceQueue(m_Device, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
     vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
@@ -338,10 +334,10 @@ void VulkanTest::CreateSurface()
 bool VulkanTest::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 {
     uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+    VK_CHECK_RESULT(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr));
 
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+    VK_CHECK_RESULT(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data()));
 
     std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
@@ -357,9 +353,9 @@ bool VulkanTest::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 bool VulkanTest::CheckValidationLayerSupport()
 {
     uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    VK_CHECK_RESULT(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
     std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    VK_CHECK_RESULT(vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()));
 
     for (const char *layerName : validationLayers)
     {
@@ -423,22 +419,22 @@ SwapChainSupportDetails VulkanTest::QuerySwapChainSupport(VkPhysicalDevice devic
 {
     SwapChainSupportDetails details;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_Surface, &details.capabilities);
+    VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_Surface, &details.capabilities));
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, nullptr);
+    VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, nullptr));
     if (formatCount != 0)
     {
         details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, details.formats.data());
+        VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, details.formats.data()));
     }
 
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, nullptr);
+    VK_CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, nullptr));
     if (presentModeCount != 0)
     {
         details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, details.presentModes.data());
+        VK_CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, details.presentModes.data()));
     }
 
     return details;
@@ -533,14 +529,11 @@ void VulkanTest::CreateSwapChain()
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(m_Device, &createInfo, nullptr, &m_SwapChain) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create swap chain!");
-    }
+    VK_CHECK_RESULT(vkCreateSwapchainKHR(m_Device, &createInfo, nullptr, &m_SwapChain))
 
-    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, nullptr);
+    VK_CHECK_RESULT(vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, nullptr));
     m_SwapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, m_SwapChainImages.data());
+    VK_CHECK_RESULT(vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, m_SwapChainImages.data()));
 
     m_SwapChainImageFormat = surfaceFormat.format;
     m_SwapChainExtent = extent;
@@ -567,18 +560,15 @@ void VulkanTest::CreateImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(m_Device, &createInfo, nullptr, &m_SwapChainImageViews[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create image views!");
-        }
+        VK_CHECK_RESULT(vkCreateImageView(m_Device, &createInfo, nullptr, &m_SwapChainImageViews[i]))
     }
 }
 
 void VulkanTest::CreateGraphicsPipeline()
 {
     // shader
-    auto vertShaderCode = ReadFile("../../draw_indexed/shaders/vert.spv");
-    auto fragShaderCode = ReadFile("../../draw_indexed/shaders/frag.spv");
+    auto vertShaderCode = ReadFile("../../draw_instanced/shaders/vert.spv");
+    auto fragShaderCode = ReadFile("../../draw_instanced/shaders/frag.spv");
 
     VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
@@ -597,15 +587,24 @@ void VulkanTest::CreateGraphicsPipeline()
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-    // vertex input
-    auto bindingDescription = Vertex::GetBindingDesCription();
-    auto attributeDescription = Vertex::GetAttributeDescription();
+    // vertex description
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+	std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    auto vertexBindingDescription = Vertex::GetBindingDesCription();
+    auto vertexAttributeDescription = Vertex::GetAttributeDescription();
+    auto InstanceBindingDescription = Instance::GetBindingDesCription();
+    auto InstanceAttributeDescription = Instance::GetAttributeDescription();
+    bindingDescriptions.push_back(vertexBindingDescription);
+    bindingDescriptions.push_back(InstanceBindingDescription);
+    attributeDescriptions.insert(attributeDescriptions.end(), vertexAttributeDescription.begin(), vertexAttributeDescription.end());
+    attributeDescriptions.insert(attributeDescriptions.end(), InstanceAttributeDescription.begin(), InstanceAttributeDescription.end());
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data();
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
 
     // input assembly
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -657,8 +656,7 @@ void VulkanTest::CreateGraphicsPipeline()
     // for uniform value in shaders
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    if (vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
-        std::runtime_error("failed to create pipeline layout!");
+    VK_CHECK_RESULT(vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout));
 
     // dynamic state
     // state can actually change without recreating the pipeline
@@ -690,8 +688,7 @@ void VulkanTest::CreateGraphicsPipeline()
     pipelineInfo.renderPass = m_RenderPass;
     pipelineInfo.subpass = 0;
 
-    if (vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline) != VK_SUCCESS)
-        throw std::runtime_error("failed to create graphics pipeline!");
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline));
 
     vkDestroyShaderModule(m_Device, fragShaderModule, nullptr);
     vkDestroyShaderModule(m_Device, vertShaderModule, nullptr);
@@ -725,10 +722,7 @@ VkShaderModule VulkanTest::CreateShaderModule(const std::vector<char>& code)
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(m_Device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create shader module");
-    }
+    VK_CHECK_RESULT(vkCreateShaderModule(m_Device, &createInfo, nullptr, &shaderModule));
 
     return shaderModule;
 }
@@ -773,8 +767,7 @@ void VulkanTest::CreateRenderPass()
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    if (vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
-        throw std::runtime_error("failed to create render pass!");
+    VK_CHECK_RESULT(vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass));
 }
 
 void VulkanTest::CreateFramebuffers()
@@ -794,8 +787,7 @@ void VulkanTest::CreateFramebuffers()
         framebufferInfo.height = m_SwapChainExtent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(m_Device, &framebufferInfo, nullptr, &m_SwapChainFramebuffers[i]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create framebuffer!");
+        VK_CHECK_RESULT(vkCreateFramebuffer(m_Device, &framebufferInfo, nullptr, &m_SwapChainFramebuffers[i]));
     }
 
 }
@@ -808,8 +800,7 @@ void VulkanTest::CreateCommandPool()
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-    if (vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
-        throw std::runtime_error("failed to create command pool!");
+    VK_CHECK_RESULT(vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_CommandPool));
 }
 
 void VulkanTest::CreateCommandBuffer()
@@ -819,16 +810,14 @@ void VulkanTest::CreateCommandBuffer()
     allocInfo.commandPool = m_CommandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
-    if (vkAllocateCommandBuffers(m_Device, &allocInfo, &m_CommandBuffer) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate command buffer!");
+    VK_CHECK_RESULT(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_CommandBuffer));
 }
 
 void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-        throw std::runtime_error("failed to begin recording command buffer!");
+    VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
     // begin render pass
     VkRenderPassBeginInfo renderPassInfo{};
@@ -846,12 +835,9 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 
     // bind vertex buffer
-    VkBuffer vertexBuffers[] = {m_VertexBuffer};
     VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-    // bind index buffer
-    vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexBuffer, offsets);
+    vkCmdBindVertexBuffers(commandBuffer, 1, 1, &m_InstanceBuffer, offsets);
 
     // set dynamic pipeline state
     VkViewport viewport{};
@@ -868,12 +854,11 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), static_cast<uint32_t>(instnaces.size()), 0, 0);
 
     // finish
     vkCmdEndRenderPass(commandBuffer);
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-        throw std::runtime_error("failed to record command buffer!");
+    VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 }
 
 void VulkanTest::CreateSyncObject()
@@ -885,26 +870,23 @@ void VulkanTest::CreateSyncObject()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if (vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore) != VK_SUCCESS ||
-        vkCreateFence(m_Device, &fenceInfo, nullptr, &m_InFlightFence) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create semaphore!");
-    }
+    VK_CHECK_RESULT(vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphore));
+    VK_CHECK_RESULT(vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore));
+    VK_CHECK_RESULT(vkCreateFence(m_Device, &fenceInfo, nullptr, &m_InFlightFence));
 }
 
 void VulkanTest::DrawFrame()
 {
     // 1. wait for the previous frame to finish
-    vkWaitForFences(m_Device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);    // wait fence be signaled
-    vkResetFences(m_Device, 1, &m_InFlightFence);   // reset fence unsignaled
+    VK_CHECK_RESULT(vkWaitForFences(m_Device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX));    // wait fence be signaled
+    VK_CHECK_RESULT(vkResetFences(m_Device, 1, &m_InFlightFence));   // reset fence unsignaled
 
     // 2. acquire and image from swap chain
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    VK_CHECK_RESULT(vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex));
 
     // 3. record a command buffer which draws the scene onto the image
-    vkResetCommandBuffer(m_CommandBuffer, 0);
+    VK_CHECK_RESULT(vkResetCommandBuffer(m_CommandBuffer, 0));
     RecordCommandBuffer(m_CommandBuffer, imageIndex);
 
     // 4. submit the recorded command buffer
@@ -922,10 +904,7 @@ void VulkanTest::DrawFrame()
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;    // the semaphore is signaled once the command buffer finished execution
 
-    if (vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, m_InFlightFence) != VK_SUCCESS)  // fence will be signaled when the command buffer finish execution
-    {
-        throw std::runtime_error("failed to submit draw command buffer!");
-    }
+    VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, m_InFlightFence)); // fence will be signaled when the command buffer finish execution
 
     // 5. present the swap chain image.
     VkPresentInfoKHR presentInfo{};
@@ -936,7 +915,7 @@ void VulkanTest::DrawFrame()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
-    vkQueuePresentKHR(m_PresentQueue, &presentInfo);
+    VK_CHECK_RESULT(vkQueuePresentKHR(m_PresentQueue, &presentInfo));
 }
 
 void VulkanTest::CreateVertexBuffer()
@@ -948,13 +927,34 @@ void VulkanTest::CreateVertexBuffer()
     CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
     void *data;
-    vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    VK_CHECK_RESULT(vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data));
     memcpy(data, vertices.data(), (size_t)bufferSize);
     vkUnmapMemory(m_Device, stagingBufferMemory);
 
     CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_VertexBuffer, m_VertexBufferMemory);
 
     CopyBuffer(stagingBuffer, m_VertexBuffer, bufferSize);
+
+    vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
+    vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
+}
+
+void VulkanTest::CreateInstanceBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(Instance) * instnaces.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void *data;
+    VK_CHECK_RESULT(vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data));
+    memcpy(data, instnaces.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_Device, stagingBufferMemory);
+
+    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_InstanceBuffer, m_InstanceBufferMemory);
+
+    CopyBuffer(stagingBuffer, m_InstanceBuffer, bufferSize);
 
     vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
     vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
@@ -995,10 +995,7 @@ void VulkanTest::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMem
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate vertex buffer memory");
-    }
+    VK_CHECK_RESULT(vkAllocateMemory(m_Device, &allocInfo, nullptr, &bufferMemory));
 
     vkBindBufferMemory(m_Device, buffer, bufferMemory, 0);
 }
@@ -1012,13 +1009,13 @@ void VulkanTest::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(m_Device, &allocInfo, &commandBuffer);
+    VK_CHECK_RESULT(vkAllocateCommandBuffers(m_Device, &allocInfo, &commandBuffer));
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;  // use one once
 
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
     VkBufferCopy copyRegion{};
     copyRegion.srcOffset = 0;
@@ -1026,38 +1023,17 @@ void VulkanTest::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-    vkEndCommandBuffer(commandBuffer);
+    VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_GraphicsQueue);
+    VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+    VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 
     vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
-}
-
-void VulkanTest::CreateIndexBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_Device, stagingBufferMemory);
-
-    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer, m_IndexBufferMemory);
-
-    CopyBuffer(stagingBuffer, m_IndexBuffer, bufferSize);
-
-    vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
-    vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
 }
 
 int main()
