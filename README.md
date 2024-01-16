@@ -4,10 +4,9 @@
 - [x] draw indexed
 - [x] draw instanced
 - [ ] dynamic rendering
-- [ ] secondary buffer
+- [x] secondary buffer
 - [ ] nested buffer
 - [ ] indirect draw
-- [ ] indirect draw from shader
 - [ ] event
 - [ ] condition rendering
 

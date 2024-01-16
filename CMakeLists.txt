@@ -21,3 +21,7 @@ add_executable(Draw draw/draw.cpp)
 add_executable(DrawIndexed draw_indexed/draw_indexed.cpp)
 
 add_executable(DrawInstanced draw_instanced/draw_instanced.cpp)
+
+add_executable(DynamicRendering dynamic_rendering/dynamic_rendering.cpp)
+
+add_executable(SecondaryBuffer secondary_buffer/secondary_buffer.cpp)

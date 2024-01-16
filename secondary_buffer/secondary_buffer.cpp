@@ -2,7 +2,7 @@
 draw a trianlge using vertex buffer. simple shader.
 */
 
-#include "draw.h"
+#include "secondary_buffer.h"
 #include "../common/tools.h"
 
 #include <limits>
@@ -793,6 +793,45 @@ void VulkanTest::CreateCommandBuffer()
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
     VK_CHECK_RESULT(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_CommandBuffer));
+
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    VK_CHECK_RESULT(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_SecondaryCommandBuffer));
+}
+
+// sedcondary buffer must has begin cmd buffer, end cmd buffer, end bind pipeline
+void VulkanTest::RecordSecondaryCommandBuffer(VkCommandBufferInheritanceInfo inheritanceInfo)
+{
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    beginInfo.pInheritanceInfo = &inheritanceInfo;
+    VK_CHECK_RESULT(vkBeginCommandBuffer(m_SecondaryCommandBuffer, &beginInfo));
+
+    // bind pipeline
+    vkCmdBindPipeline(m_SecondaryCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
+
+    // bind vertex buffer
+    VkBuffer vertexBuffers[] = {m_VertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(m_SecondaryCommandBuffer, 0, 1, vertexBuffers, offsets);
+
+    // set dynamic pipeline state
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(m_SwapChainExtent.width);
+    viewport.height = static_cast<float>(m_SwapChainExtent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(m_SecondaryCommandBuffer, 0, 1, &viewport);
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = m_SwapChainExtent;
+    vkCmdSetScissor(m_SecondaryCommandBuffer, 0, 1, &scissor);
+
+    vkCmdDraw(m_SecondaryCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
+    VK_CHECK_RESULT(vkEndCommandBuffer(m_SecondaryCommandBuffer));
 }
 
 void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
@@ -811,32 +850,15 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-    // bind pipeline
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
-
-    // bind vertex buffer
-    VkBuffer vertexBuffers[] = {m_VertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-    // set dynamic pipeline state
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_SwapChainExtent.width);
-    viewport.height = static_cast<float>(m_SwapChainExtent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = m_SwapChainExtent;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-    // draw
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    // record and execute secondary buffer
+    VkCommandBufferInheritanceInfo cmdBufferInheritanceInfo {};
+	cmdBufferInheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    cmdBufferInheritanceInfo.renderPass = m_RenderPass;
+    cmdBufferInheritanceInfo.framebuffer = m_SwapChainFramebuffers[imageIndex];
+    RecordSecondaryCommandBuffer(cmdBufferInheritanceInfo);
+    vkCmdExecuteCommands(commandBuffer, 1, &m_SecondaryCommandBuffer);
 
     // finish
     vkCmdEndRenderPass(commandBuffer);
