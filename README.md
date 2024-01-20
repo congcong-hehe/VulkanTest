@@ -3,7 +3,7 @@
 - [x] draw
 - [x] draw indexed
 - [x] draw instanced
-- [ ] dynamic rendering
+- [x] dynamic rendering
 - [x] secondary buffer
 - [ ] nested buffer
 - [ ] indirect draw
