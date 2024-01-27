@@ -11,17 +11,7 @@ namespace HVK
         VkDeviceSize bufferSize = 0;
         VkBufferUsageFlagBits usage;
 
-        void Destroy()
-        {
-            if (buffer)
-            {
-                vkDestroyBuffer(device, buffer, nullptr);
-            }
-            if (memory)
-            {
-                vkFreeMemory(device, memory, nullptr);
-            }
-        }
+        void Destroy();
     };
 
 } // namespace HVK

@@ -1,5 +1,5 @@
 /*
-graphics test bacis class.
+graphics test base class.
 */
 
 #include "graphic_test.h"

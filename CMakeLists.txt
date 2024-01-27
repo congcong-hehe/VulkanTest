@@ -21,6 +21,7 @@ add_library(Common
     common/buffer.cpp
     common/graphic_test.cpp
     common/tools.cpp
+    common/buffer.cpp
 )
 
 # target
