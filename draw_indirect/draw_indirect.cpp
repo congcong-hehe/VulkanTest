@@ -1,8 +1,9 @@
 /*
-draw a trianlge using index buffer. simple shader.
+indirect draw. Draw type meshs in one drawcall. The first is a triangle with one triangle.
+The second is a rect with two triangles. Set instance count of type meshes is two.
 */
 
-#include "draw_indexed.h"
+#include "draw_indirect.h"
 #include "tools.h"
 
 #include <limits>
@@ -10,6 +11,7 @@ draw a trianlge using index buffer. simple shader.
 #include <string>
 #include <fstream>
 
+// triangle mesh
 const std::vector<Vertex> vertices = 
 {
     {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -17,10 +19,24 @@ const std::vector<Vertex> vertices =
     {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 };
 
-const std::vector<uint32_t> indices = 
-{
-    0, 1, 2
-};
+// //rectangle mesh
+// const std::vector<Vertex> vertices2 = 
+// {
+//     {{-0.5f, -0.5f}},
+//     {{0.5f, -0.5f}},
+//     {{0.5f, 0.5f}},
+//     {{-0.5f, -0.5f}},
+//     {{0.5f, 0.5f}},
+//     {{-0.5f, 0.5f}}
+// };
+
+// const std::vector<Instance> instances = 
+// {
+//     {{-0.5f, -0.5f}, {0.8f}, {1.0f, 0.0f, 0.0f}},
+//     {{-0.5f, 0.5f}, {0.5f}, {0.0f, 1.0f, 0.0f}},
+//     {{0.5f, -0.5f}, {0.7f}, {0.0f, 1.0f, 1.0f}},
+//     {{0.5f, 0.5f}, {0.5f}, {0.0f, 1.0f, 1.0f}},
+// };
 
 VulkanTest::VulkanTest()
 {
@@ -31,24 +47,18 @@ VulkanTest::VulkanTest()
     m_vertexBuferWarp.bufferSize = vertices.size() * sizeof(Vertex);
     m_vertexBuferWarp.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     CreateHostToDeviceBuffer(vertices.data(), m_vertexBuferWarp);
-
-    m_indexBufferWarp.device = m_Device;
-    m_indexBufferWarp.bufferSize = indices.size() * sizeof(uint32_t);
-    m_indexBufferWarp.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    CreateHostToDeviceBuffer(indices.data(), m_indexBufferWarp);
 }
 
 VulkanTest::~VulkanTest()
 {
     m_vertexBuferWarp.Destroy();
-    m_indexBufferWarp.Destroy();
 }
 
 void VulkanTest::CreateGraphicsPipeline()
 {
     // shader
-    auto vertShaderCode = ReadFile("../../draw_indexed/shaders/vert.spv");
-    auto fragShaderCode = ReadFile("../../draw_indexed/shaders/frag.spv");
+    auto vertShaderCode = ReadFile("../../draw_indirect/shaders/vert.spv");
+    auto fragShaderCode = ReadFile("../../draw_indirect/shaders/frag.spv");
 
     VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
@@ -165,6 +175,7 @@ void VulkanTest::CreateGraphicsPipeline()
     vkDestroyShaderModule(m_Device, vertShaderModule, nullptr);
 }
 
+
 void VulkanTest::CreateRenderPass()
 {
     // attachment description
@@ -234,9 +245,6 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    // bind index buffer
-    vkCmdBindIndexBuffer(commandBuffer, m_indexBufferWarp.buffer, 0, VK_INDEX_TYPE_UINT32);
-
     // set dynamic pipeline state
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -252,7 +260,7 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
     // finish
     vkCmdEndRenderPass(commandBuffer);

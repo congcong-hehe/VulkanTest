@@ -8,23 +8,7 @@
 #include <set>
 #include <array>
 
-struct QueueFamilyIndices
-{
-    std::optional<uint32_t> graphicsFamily; // std::optional is a warpper that contains no value uitil you assign something to it
-    std::optional<uint32_t> presentFamily;
-
-    bool IsComplete()
-    {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-};
-
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
+#include "graphic_test.h"
 
 struct Vertex
 {
@@ -94,121 +78,16 @@ struct Instance
     }
 };
 
-class VulkanTest
+class VulkanTest : public GraphicTest
 {
 public:
-    void Run();
+    VulkanTest();
+    ~VulkanTest();
+    virtual void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) final;
+    virtual void CreateRenderPass() override;
+    virtual void CreateGraphicsPipeline() final;
 
-private:
-    // main function
-    void InitVulkan();
-    void MainLoop();
-    void CleanUp();
-
-    // window
-    void InitWindow();
-
-    // instance
-    void CreateInstance();
-
-    // validation layers
-    bool CheckValidationLayerSupport();
-
-    // debug messager
-    void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-    void SetupDebugMessenger();
-
-    // extensions
-    std::vector<const char*> GetRequiredExtensions();
-    bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
-
-    // physical device
-    void PickPhysicalDevice();
-    bool IsDeviceSuitable(VkPhysicalDevice device);
-
-    // queue families
-    QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
-
-    // logical device and queue
-    void CreateLogicalDevice();
-
-    // surafce
-    void CreateSurface();
-
-    // swap chain
-    SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
-    VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
-    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes);
-    VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
-    void CreateSwapChain();
-
-    // image views
-    void CreateImageViews();
-
-    // grraphics pipeline
-    void CreateGraphicsPipeline();
-
-    // shader
-    std::vector<char> ReadFile(const std::string &fileName);
-    VkShaderModule CreateShaderModule(const std::vector<char>& code);
-
-    // render pass
-    void CreateRenderPass();
-
-    // framebuffer
-    void CreateFramebuffers();
-
-    // command pool
-    void CreateCommandPool();
-
-    // command buffer
-    void CreateCommandBuffer();
-    void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-
-    // draw
-    void DrawFrame();
-
-    // synchronization
-    void CreateSyncObject();
-
-    // buffer
-    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory& bufferMemory);
-    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-
-    // vertex buffer
-    void CreateVertexBuffer();
-
-    // memory
-    uint32_t FindMemoryType(uint32_t typeFillter, VkMemoryPropertyFlags properties);
-
-    // instance buffer
-    void CreateInstanceBuffer();
-
-private:
-    GLFWwindow* m_Window;
-    VkInstance m_Instance;
-    VkDebugUtilsMessengerEXT m_DebugMessenger;
-    VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
-    VkDevice m_Device;
-    VkQueue m_GraphicsQueue;
-    VkSurfaceKHR m_Surface;
-    VkQueue m_PresentQueue;
-    VkSwapchainKHR m_SwapChain;
-    std::vector<VkImage> m_SwapChainImages;
-    VkFormat m_SwapChainImageFormat;
-    VkExtent2D m_SwapChainExtent;
-    std::vector<VkImageView> m_SwapChainImageViews;
-    VkRenderPass m_RenderPass;
-    VkPipelineLayout m_PipelineLayout;
-    VkPipeline m_GraphicsPipeline;
-    std::vector<VkFramebuffer> m_SwapChainFramebuffers;
-    VkCommandPool m_CommandPool;
-    VkCommandBuffer m_CommandBuffer;
-    VkSemaphore m_ImageAvailableSemaphore;  // semaphore used to sync in GPU
-    VkSemaphore m_RenderFinishedSemaphore;  
-    VkFence m_InFlightFence;  // fence used to sync between GPU and CPU
-    VkBuffer m_VertexBuffer;
-    VkDeviceMemory m_VertexBufferMemory;
-    VkBuffer m_InstanceBuffer;
-    VkDeviceMemory m_InstanceBufferMemory;
+public:
+    HVK::BufferWarp m_vertexBuferWarp;
+    HVK::BufferWarp m_instanceBufferWarp;
 };
