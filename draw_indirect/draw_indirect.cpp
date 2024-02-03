@@ -11,47 +11,56 @@ The second is a rect with two triangles. Set instance count of type meshes is tw
 #include <string>
 #include <fstream>
 
-// triangle mesh
+// must use on vertex buffer
 const std::vector<Vertex> vertices = 
 {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    // triangle mesh
+    {{0.0f, -0.5f}},
+    {{0.5f, 0.5f}},
+    {{-0.5f, 0.5f}},
+
+    // rectangle mesh
+    {{-0.5f, -0.5f}},
+    {{0.5f, -0.5f}},
+    {{0.5f, 0.5f}},
+    {{-0.5f, -0.5f}},
+    {{0.5f, 0.5f}},
+    {{-0.5f, 0.5f}}
 };
 
-// //rectangle mesh
-// const std::vector<Vertex> vertices2 = 
-// {
-//     {{-0.5f, -0.5f}},
-//     {{0.5f, -0.5f}},
-//     {{0.5f, 0.5f}},
-//     {{-0.5f, -0.5f}},
-//     {{0.5f, 0.5f}},
-//     {{-0.5f, 0.5f}}
-// };
-
-// const std::vector<Instance> instances = 
-// {
-//     {{-0.5f, -0.5f}, {0.8f}, {1.0f, 0.0f, 0.0f}},
-//     {{-0.5f, 0.5f}, {0.5f}, {0.0f, 1.0f, 0.0f}},
-//     {{0.5f, -0.5f}, {0.7f}, {0.0f, 1.0f, 1.0f}},
-//     {{0.5f, 0.5f}, {0.5f}, {0.0f, 1.0f, 1.0f}},
-// };
+const std::vector<Instance> instances = 
+{
+    {{-0.5f, -0.5f}, {0.8f}, {1.0f, 0.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.7f}, {0.0f, 0.0f, 1.0f}},
+    {{0.5f, 0.5f}, {0.5f}, {0.0f, 1.0f, 1.0f}},
+};
 
 VulkanTest::VulkanTest()
 {
+    m_deviceFeatures.multiDrawIndirect = VK_TRUE;
+
     this->InitWindow();
     this->InitVulkan();  // must called in derived class, becase it has virtual function
 
-    m_vertexBuferWarp.device = m_Device;
-    m_vertexBuferWarp.bufferSize = vertices.size() * sizeof(Vertex);
-    m_vertexBuferWarp.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    CreateHostToDeviceBuffer(vertices.data(), m_vertexBuferWarp);
+    m_vertexBufferWarp.device = m_Device;
+    m_vertexBufferWarp.bufferSize = vertices.size() * sizeof(Vertex);
+    m_vertexBufferWarp.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    CreateHostToDeviceBuffer(vertices.data(), m_vertexBufferWarp);
+
+    m_instanceBufferWarp.device = m_Device;
+    m_instanceBufferWarp.bufferSize = instances.size() * sizeof(Instance);
+    m_instanceBufferWarp.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    CreateHostToDeviceBuffer(instances.data(), m_instanceBufferWarp);
+
+    PrepareIndirectData();
 }
 
 VulkanTest::~VulkanTest()
 {
-    m_vertexBuferWarp.Destroy();
+    m_vertexBufferWarp.Destroy();
+    m_instanceBufferWarp.Destroy();
+    m_indirectBufferWarp.Destroy();
 }
 
 void VulkanTest::CreateGraphicsPipeline()
@@ -77,15 +86,20 @@ void VulkanTest::CreateGraphicsPipeline()
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-    // vertex input
-    auto bindingDescription = Vertex::GetBindingDesCription();
-    auto attributeDescription = Vertex::GetAttributeDescription();
+    // vertex description
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+    Vertex::GetBindingDesCription(0, bindingDescriptions);
+    Instance::GetBindingDesCription(1, bindingDescriptions);
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    Vertex::GetAttributeDescription(0, attributeDescriptions);
+    Instance::GetAttributeDescription(1, attributeDescriptions);
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data();
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
 
     // input assembly
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -241,9 +255,17 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 
     // bind vertex buffer
-    VkBuffer vertexBuffers[] = {m_vertexBuferWarp.buffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    {
+        VkBuffer vertexBuffers[] = {m_vertexBufferWarp.buffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    }
+    // bind instance buffer
+    {
+        VkBuffer vertexBuffers[] = {m_instanceBufferWarp.buffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 1, 1, vertexBuffers, offsets);
+    }
 
     // set dynamic pipeline state
     VkViewport viewport{};
@@ -260,11 +282,35 @@ void VulkanTest::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdDrawIndirect(commandBuffer, m_indirectBufferWarp.buffer, 0, 2, sizeof(VkDrawIndirectCommand));
 
     // finish
     vkCmdEndRenderPass(commandBuffer);
     VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+}
+
+void VulkanTest::PrepareIndirectData()
+{
+    std::vector<VkDrawIndirectCommand> indirectCmds;
+
+    indirectCmds.push_back({
+        .vertexCount = 3,
+        .instanceCount = 2,
+        .firstVertex = 0,
+        .firstInstance = 0
+    });
+
+    indirectCmds.push_back({
+        .vertexCount = 6,
+        .instanceCount = 2,
+        .firstVertex = 3,
+        .firstInstance = 2
+    });
+
+    m_indirectBufferWarp.device = m_Device;
+    m_indirectBufferWarp.bufferSize = indirectCmds.size() * sizeof(VkDrawIndirectCommand);
+    m_indirectBufferWarp.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    CreateHostToDeviceBuffer(indirectCmds.data(), m_indirectBufferWarp);
 }
 
 int main()

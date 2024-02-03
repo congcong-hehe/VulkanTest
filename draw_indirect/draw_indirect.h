@@ -13,34 +13,64 @@
 struct Vertex
 {
     glm::vec2 pos;
-    glm::vec3 color;
 
-    static VkVertexInputBindingDescription GetBindingDesCription()
+    static void GetBindingDesCription(const uint32_t bindingIndex, std::vector<VkVertexInputBindingDescription> &bindingDesCriptions)
     {
-        VkVertexInputBindingDescription bindingDesCription{};
-
-        bindingDesCription.binding = 0; // the index in array of bindings
-        bindingDesCription.stride = sizeof(Vertex);
-        bindingDesCription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        return bindingDesCription;
+        bindingDesCriptions.push_back({
+            .binding = bindingIndex,
+            .stride = sizeof(Vertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
     }
 
-    static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescription()
+    static void GetAttributeDescription(const uint32_t bindingIndex, std::vector<VkVertexInputAttributeDescription> &attributeDescriptions)
     {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescription{};
-        
-        attributeDescription[0].binding = 0;
-        attributeDescription[0].location = 0;   // location in vertex shader
-        attributeDescription[0].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescription[0].offset = offsetof(Vertex, pos);
+        attributeDescriptions.push_back({
+            .location = 0,
+            .binding = bindingIndex,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(Vertex, pos)
+        });
+    }
+};
 
-        attributeDescription[1].binding = 0;
-        attributeDescription[1].location = 1;
-        attributeDescription[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescription[1].offset = offsetof(Vertex, color);
+struct Instance
+{
+    glm::vec2 pos;
+    float scale;
+    glm::vec3 color;
 
-        return attributeDescription;
+    static void GetBindingDesCription(const uint32_t bindingIndex, std::vector<VkVertexInputBindingDescription> &bindingDesCriptions)
+    {
+        bindingDesCriptions.push_back({
+            .binding = bindingIndex,
+            .stride = sizeof(Instance),
+            .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
+        });
+    }
+
+    static void GetAttributeDescription(const uint32_t bindingIndex, std::vector<VkVertexInputAttributeDescription> &attributeDescriptions)
+    {
+        attributeDescriptions.push_back({
+            .location = 1,
+            .binding = bindingIndex,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(Instance, pos)
+        });
+
+        attributeDescriptions.push_back({
+            .location = 2,
+            .binding = bindingIndex,
+            .format = VK_FORMAT_R32_SFLOAT,
+            .offset = offsetof(Instance, scale)
+        });
+
+        attributeDescriptions.push_back({
+            .location = 3,
+            .binding = bindingIndex,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(Instance, color)
+        });
     }
 };
 
@@ -52,7 +82,10 @@ public:
     virtual void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) final;
     virtual void CreateRenderPass() override;
     virtual void CreateGraphicsPipeline() final;
+    void PrepareIndirectData();
 
 public:
-    HVK::BufferWarp m_vertexBuferWarp;
+    HVK::BufferWarp m_vertexBufferWarp;
+    HVK::BufferWarp m_instanceBufferWarp;
+    HVK::BufferWarp m_indirectBufferWarp;
 };

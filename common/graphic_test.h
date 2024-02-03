@@ -118,4 +118,5 @@ public:
     std::vector<const char *> m_instanceExtensions;
     const uint32_t m_width;
     const uint32_t m_height;
+    VkPhysicalDeviceFeatures m_deviceFeatures{};
 };
