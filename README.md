@@ -6,7 +6,7 @@
 - [x] dynamic rendering
 - [x] secondary buffer
 - [ ] nested buffer
-- [ ] indirect draw
+- [x] indirect draw
 - [ ] event
 - [ ] condition rendering
 
