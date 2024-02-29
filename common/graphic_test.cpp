@@ -56,7 +56,7 @@ void GraphicTest::InitWindow()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // not create OpenGL context
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    m_Window = glfwCreateWindow(m_width, m_height, "Triangle", nullptr, nullptr);
+    m_Window = glfwCreateWindow(m_width, m_height, "Vulkan_test", nullptr, nullptr);
 }
 
 void GraphicTest::InitVulkan()
@@ -135,11 +135,11 @@ void GraphicTest::CreateInstance()
     // tell this info to driver, driver could optimitize the app specifically
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Triangle";
+    appInfo.pApplicationName = "Vulkan_Test";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "NO Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = m_api_version;
 
     // 2. create info
     VkInstanceCreateInfo createInfo{};

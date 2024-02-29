@@ -18,7 +18,7 @@
 - [ ] transform feedback
 - [ ] tessellation
 - [ ] geometry shader
-- [ ] mesh shader
+- [x] mesh shader
 - [ ] multi viewport
 
 ## Fragment

@@ -42,3 +42,6 @@ target_link_libraries(SecondaryBuffer Common)
 
 add_executable(DrawIndirect draw_indirect/draw_indirect.cpp)
 target_link_libraries(DrawIndirect Common)
+
+add_executable(MeshShader mesh_shader/mesh_shader.cpp)
+target_link_libraries(MeshShader Common)

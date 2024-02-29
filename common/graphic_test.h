@@ -119,4 +119,5 @@ public:
     const uint32_t m_width;
     const uint32_t m_height;
     VkPhysicalDeviceFeatures m_deviceFeatures{};
+    uint32_t m_api_version = VK_API_VERSION_1_0;
 };
